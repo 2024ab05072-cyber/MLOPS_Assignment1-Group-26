@@ -1,0 +1,39 @@
+# Virtual Environments
+venv/
+.env/
+.env*/
+.venv/
+
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+
+# Logs
+*.log
+
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+
+# Test / Coverage files
+.coverage
+htmlcov/
+.pytest_cache/
+
+
+# Build / Distribution
+build/
+dist/
+*.egg-info/

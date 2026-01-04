@@ -1,7 +1,11 @@
 # Import necessary libraries
+
 import os
 import pandas as pd
 import numpy as np
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning) 
+warnings.filterwarnings("ignore", category=UserWarning)
 
 # For Model training and evaluation
 from sklearn.model_selection import train_test_split, cross_val_score
@@ -112,7 +116,7 @@ rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
 rf_auc = log_experiment(rf_model, "Random Forest", X_train, y_train, X_test, y_test)
 
 # Model 3: LightGBM (replacing XGBoost)
-lgbm_model = LGBMClassifier(n_estimators=300, random_state=42)
+lgbm_model = LGBMClassifier(n_estimators=300, random_state=42, verbose=-1)
 
 lgbm_auc = log_experiment(lgbm_model, "LightGBM", X_train, y_train, X_test, y_test)
 

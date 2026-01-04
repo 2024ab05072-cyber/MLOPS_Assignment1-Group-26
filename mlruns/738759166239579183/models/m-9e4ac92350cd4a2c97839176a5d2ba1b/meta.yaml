@@ -1,0 +1,10 @@
+artifact_location: file:C:/Users/Admin/Downloads/MLOPS_Assignment1_Group 26/MLOPS_Assignment1-Group-26/mlruns/738759166239579183/models/m-9e4ac92350cd4a2c97839176a5d2ba1b/artifacts
+creation_timestamp: 1767568487699
+experiment_id: '738759166239579183'
+last_updated_timestamp: 1767568495578
+model_id: m-9e4ac92350cd4a2c97839176a5d2ba1b
+model_type: null
+name: model
+source_run_id: 76ca37e09d6e4c1e87ffdef2ca77cc1b
+status: 2
+status_message: null

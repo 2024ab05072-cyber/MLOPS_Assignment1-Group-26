@@ -1,0 +1,14 @@
+artifact_uri: file:C:/Users/Admin/Downloads/MLOPS_Assignment1_Group 26/MLOPS_Assignment1-Group-26/mlruns/738759166239579183/9f8555d4c80144fd8f15558bf45606cf/artifacts
+end_time: 1767568504518
+entry_point_name: ''
+experiment_id: '738759166239579183'
+lifecycle_stage: active
+run_id: 9f8555d4c80144fd8f15558bf45606cf
+run_name: AdaBoost
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1767568495640
+status: 3
+tags: []
+user_id: Admin

@@ -10,6 +10,13 @@ service:
   port: 80
   targetPort: 8000
 
+# Prometheus ServiceMonitor Configuration
+prometheus:
+  enabled: true
+  interval: 15s
+  scrapeTimeout: 10s
+  path: /metrics
+
 resources: {}
 
 nodeSelector: {}

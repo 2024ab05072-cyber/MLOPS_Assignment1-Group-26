@@ -6,6 +6,7 @@ from fastapi.responses import PlainTextResponse, JSONResponse
 from pydantic import BaseModel, Field
 import logging
 import time
+from prometheus_fastapi_instrumentator import Instrumentator
 
 
 # Logging Configuration
@@ -38,6 +39,9 @@ TOTAL_TIME_SECONDS = 0.0
 
 # Initialize FastAPI Application
 app = FastAPI(title="Heart Disease Prediction API", version="1.1")
+
+# Add Prometheus instrumentation for metrics
+Instrumentator().instrument(app).expose(app)
 
 
 # Request Payload Schema with validation

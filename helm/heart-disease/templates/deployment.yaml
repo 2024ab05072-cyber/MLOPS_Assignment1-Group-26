@@ -11,6 +11,10 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
         - name: heart-disease-api
@@ -18,3 +22,4 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: 8000
+              name: http

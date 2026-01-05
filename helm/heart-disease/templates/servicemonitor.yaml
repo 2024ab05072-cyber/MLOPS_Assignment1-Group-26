@@ -1,3 +1,4 @@
+{{- if .Values.prometheus.enabled }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -10,8 +11,10 @@ spec:
       app: {{ .Release.Name }}
   endpoints:
     - port: http
-      path: /metrics
-      interval: 15s
+      path: {{ .Values.prometheus.path }}
+      interval: {{ .Values.prometheus.interval }}
+      scrapeTimeout: {{ .Values.prometheus.scrapeTimeout }}
   namespaceSelector:
     matchNames:
       - default
+{{- end }}

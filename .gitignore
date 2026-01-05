@@ -40,3 +40,9 @@ dist/
 
 # Ignore MLflow runs
 mlruns/
+
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo

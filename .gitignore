@@ -37,3 +37,6 @@ htmlcov/
 build/
 dist/
 *.egg-info/
+
+# Ignore MLflow runs
+mlruns/

@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  PYTHON_VERSION: '3.11'   # Global Python version for all jobs
+
 jobs:
   # Stage 1: Setup & Lint
   lint:
@@ -17,7 +20,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Install dependencies
       run: |
@@ -30,7 +33,7 @@ jobs:
   # Stage 2: Unit Tests
   test:
     runs-on: ubuntu-latest
-    needs: lint   # run only if lint passes
+    needs: lint
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -38,7 +41,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Install dependencies
       run: |
@@ -51,7 +54,7 @@ jobs:
   # Stage 3: Train Model
   train:
     runs-on: ubuntu-latest
-    needs: test   # running only if tests pass
+    needs: test
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -59,7 +62,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Install dependencies
       run: |

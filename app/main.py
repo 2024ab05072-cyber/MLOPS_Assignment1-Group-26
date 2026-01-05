@@ -1,7 +1,7 @@
 # Required Libraries
 import pickle
 import numpy as np
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import PlainTextResponse, JSONResponse
 from pydantic import BaseModel, Field
 import logging
@@ -55,6 +55,15 @@ class HeartInputSchema(BaseModel):
     st_slope: int
     Ca: int
     thal: int
+
+
+# Middleware to log all requests and responses
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    logger.info(f"Request: {request.method} {request.url}")
+    response = await call_next(request)
+    logger.info(f"Response status: {response.status_code}")
+    return response
 
 
 # Health Check Endpoint

@@ -1,0 +1,19 @@
+replicaCount: 1
+
+image:
+  repository: 112875909909.dkr.ecr.ap-south-1.amazonaws.com/heart-disease-api
+  pullPolicy: IfNotPresent
+  tag: latest
+
+service:
+  type: LoadBalancer
+  port: 80
+  targetPort: 8000
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

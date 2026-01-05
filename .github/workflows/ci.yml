@@ -50,10 +50,10 @@ jobs:
 
     # Run your specific test files directly
     - name: Run dataset tests
-      run: python -m unittest src/tests/test_dataset.py
+      run: python -m unittest test/test_dataset.py
 
     - name: Run artifacts tests
-      run: python -m unittest src/tests/test_artifacts.py
+      run: python -m unittest test/test_artifacts.py
 
   # Stage 3: Train Model
   train:

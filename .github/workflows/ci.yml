@@ -259,6 +259,37 @@ jobs:
             sleep 10
           done
 
+      - name: Cleanup conflicting non-Helm resources
+        run: |
+          echo "Checking for existing resources that may conflict with Helm release..."
+          NAMESPACE=default
+          CONFLICT_NAMES=("heart-disease-service" "heart-disease-deployment" "heart-disease-api")
+          for NAME in "${CONFLICT_NAMES[@]}"; do
+            # Check Service
+            if kubectl get svc "$NAME" -n "$NAMESPACE" >/dev/null 2>&1; then
+              OWNED=$(kubectl get svc "$NAME" -n "$NAMESPACE" -o jsonpath='{.metadata.annotations.meta.helm.sh/release-name}' 2>/dev/null || echo "")
+              MANAGED=$(kubectl get svc "$NAME" -n "$NAMESPACE" -o jsonpath='{.metadata.labels.app.kubernetes.io/managed-by}' 2>/dev/null || echo "")
+              if [ -z "$OWNED" ] && [ "$MANAGED" != "Helm" ]; then
+                echo "Deleting non-Helm Service: $NAME"
+                kubectl delete svc "$NAME" -n "$NAMESPACE" || true
+              else
+                echo "Service $NAME is managed by Helm; skipping"
+              fi
+            fi
+
+            # Check Deployment
+            if kubectl get deploy "$NAME" -n "$NAMESPACE" >/dev/null 2>&1; then
+              OWNED_DEP=$(kubectl get deploy "$NAME" -n "$NAMESPACE" -o jsonpath='{.metadata.annotations.meta.helm.sh/release-name}' 2>/dev/null || echo "")
+              MANAGED_DEP=$(kubectl get deploy "$NAME" -n "$NAMESPACE" -o jsonpath='{.metadata.labels.app.kubernetes.io/managed-by}' 2>/dev/null || echo "")
+              if [ -z "$OWNED_DEP" ] && [ "$MANAGED_DEP" != "Helm" ]; then
+                echo "Deleting non-Helm Deployment: $NAME"
+                kubectl delete deploy "$NAME" -n "$NAMESPACE" || true
+              else
+                echo "Deployment $NAME is managed by Helm; skipping"
+              fi
+            fi
+          done
+
       - name: Deploy/Upgrade with Helm (toggle Prometheus)
         run: |
           if kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; then

@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: heart-disease-api
-        image: heart-disease-api:latest
+        image: 112875909909.dkr.ecr.ap-south-1.amazonaws.com/heart-disease-api:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000

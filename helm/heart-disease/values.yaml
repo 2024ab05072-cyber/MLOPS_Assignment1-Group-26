@@ -12,7 +12,7 @@ service:
 
 # Prometheus ServiceMonitor Configuration
 prometheus:
-  enabled: true
+  enabled: false
   interval: 15s
   scrapeTimeout: 10s
   path: /metrics

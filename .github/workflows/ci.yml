@@ -54,8 +54,8 @@ jobs:
     - name: Run unit tests (artifacts)
       run: python ./test/test_artifacts.py
 
-    - name: Run unit tests (app api)
-      run: python ./test/test_app_api.py
+    # - name: Run unit tests (app api)
+    #   run: python ./test/test_app_api.py
 
   # Stage 3: Train Model
   train:

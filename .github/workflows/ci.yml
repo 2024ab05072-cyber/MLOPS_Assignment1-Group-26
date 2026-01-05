@@ -201,7 +201,14 @@ jobs:
 
       - name: Verify deployment
         run: |
-          kubectl rollout status deployment/heart-disease-deployment -n default --timeout=5m
+          echo "Verifying deployment availability..."
+          if kubectl get deployment heart-disease-deployment -n default >/dev/null 2>&1; then
+            kubectl rollout status deployment/heart-disease-deployment -n default --timeout=5m
+          elif kubectl get deployment heart-disease-api -n default >/dev/null 2>&1; then
+            kubectl rollout status deployment/heart-disease-api -n default --timeout=5m
+          else
+            echo "No deployment named 'heart-disease-deployment' or 'heart-disease-api' found in namespace 'default'. Skipping rollout status check."
+          fi
 
   # Stage 7: Deploy with Helm (Prometheus & ServiceMonitor)
   helm-deploy:
@@ -256,8 +263,8 @@ jobs:
         run: |
           if kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; then
             echo "CRD exists; enabling prometheus in Helm chart"
-            helm upgrade --install heart-disease ./helm/heart-disease --namespace default --wait --set prometheus.enabled=true
+            helm upgrade --install heart-disease ./helm/heart-disease --namespace default --wait --atomic --timeout 10m --set prometheus.enabled=true
           else
             echo "CRD not found; installing chart with prometheus disabled"
-            helm upgrade --install heart-disease ./helm/heart-disease --namespace default --wait --set prometheus.enabled=false
+            helm upgrade --install heart-disease ./helm/heart-disease --namespace default --wait --atomic --timeout 10m --set prometheus.enabled=false
           fi

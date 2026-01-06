@@ -1,11 +1,12 @@
 # Required Libraries
 import pickle
 import numpy as np
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import PlainTextResponse, JSONResponse
 from pydantic import BaseModel, Field
 import logging
 import time
+from prometheus_fastapi_instrumentator import Instrumentator
 
 
 # Logging Configuration
@@ -39,6 +40,9 @@ TOTAL_TIME_SECONDS = 0.0
 # Initialize FastAPI Application
 app = FastAPI(title="Heart Disease Prediction API", version="1.1")
 
+# Add Prometheus instrumentation for metrics
+Instrumentator().instrument(app).expose(app)
+
 
 # Request Payload Schema with validation
 class HeartInputSchema(BaseModel):
@@ -55,6 +59,15 @@ class HeartInputSchema(BaseModel):
     st_slope: int
     Ca: int
     thal: int
+
+
+# Middleware to log all requests and responses
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    logger.info(f"Request: {request.method} {request.url}")
+    response = await call_next(request)
+    logger.info(f"Response status: {response.status_code}")
+    return response
 
 
 # Health Check Endpoint

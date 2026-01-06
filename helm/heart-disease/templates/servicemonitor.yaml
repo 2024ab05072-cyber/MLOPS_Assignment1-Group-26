@@ -1,0 +1,22 @@
+{{- if and (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") .Values.prometheus.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}-servicemonitor
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  endpoints:
+    - port: http
+      path: {{ .Values.prometheus.path }}
+      interval: {{ .Values.prometheus.interval }}
+      scrapeTimeout: {{ .Values.prometheus.scrapeTimeout }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+{{- else }}
+{{- /* ServiceMonitor not rendered: either CRD missing or prometheus disabled */ -}}
+{{- end }}

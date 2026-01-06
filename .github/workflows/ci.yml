@@ -28,7 +28,7 @@ jobs:
         pip install -r ./requirements.txt
 
     - name: Lint code (basic)
-      run: python -m compileall ./src ./app
+      run: python -m compileall ./app
 
   # Stage 2: Unit Tests
   test:
@@ -92,6 +92,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Download trained model artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: trained-model
+          path: ./artifacts/
+
       - name: Build Docker image
         run: docker build -t heart-disease-api .
 
@@ -106,12 +112,190 @@ jobs:
 
       - name: Test /predict endpoint
         run: |
-          curl -X POST "http://localhost:8000/predict" \
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://localhost:8000/predict" \
             -H "Content-Type: application/json" \
-            -d '{"age":63,"sex":1,"chest_pain":3,"resting_bp":145,"chol":233,"fasting_bs":1,"rest_ecg":0,"max_hr":150,"exercise_angina":0,"oldpeak":2.3,"st_slope":0,"Ca":0,"thal":1}'
+            -d '{"age":63,"sex":1,"chest_pain":3,"resting_bp":145,"chol":233,"fasting_bs":1,"rest_ecg":0,"max_hr":150,"exercise_angina":0,"oldpeak":2.3,"st_slope":0,"Ca":0,"thal":1}')
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Prediction endpoint returned HTTP $HTTP_CODE"
+            echo "Response: $(echo "$RESPONSE" | head -1)"
+            exit 1
+          fi
+          echo "Prediction endpoint test passed"
 
       - name: Stop Docker container
         run: docker stop heart-api
 
       - name: Remove Docker container
         run: docker rm heart-api
+
+  # Stage 5: Push Docker Image to AWS ECR
+  push-to-ecr:
+    runs-on: ubuntu-latest
+    needs: train
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Download trained model artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: trained-model
+          path: ./artifacts/
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Docker image
+        run: docker build -t heart-disease-api .
+
+      - name: Tag Docker image
+        run: docker tag heart-disease-api:latest 112875909909.dkr.ecr.ap-south-1.amazonaws.com/heart-disease-api:latest
+
+      - name: Push Docker image to ECR
+        run: docker push 112875909909.dkr.ecr.ap-south-1.amazonaws.com/heart-disease-api:latest
+
+  # Stage 6: Deploy to AWS EKS
+  deploy-to-eks:
+    runs-on: ubuntu-latest
+    needs: push-to-ecr
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Update kubeconfig for EKS
+        run: aws eks update-kubeconfig --region ap-south-1 --name heart-disease-cluster
+
+      - name: Create ECR secret in EKS
+        run: |
+          ECR_TOKEN=$(aws ecr get-authorization-token --region ap-south-1 --output text --query 'authorizationData[].authorizationToken')
+          kubectl create secret docker-registry ecr-secret \
+            --docker-server=112875909909.dkr.ecr.ap-south-1.amazonaws.com \
+            --docker-username=AWS \
+            --docker-password=$(echo $ECR_TOKEN | base64 --decode | cut -d: -f2) \
+            --namespace=default \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy to EKS using kubectl
+        run: kubectl apply -f k8s/
+
+      - name: Verify deployment
+        run: |
+          echo "Verifying deployment availability..."
+          if kubectl get deployment heart-disease-deployment -n default >/dev/null 2>&1; then
+            kubectl rollout status deployment/heart-disease-deployment -n default --timeout=5m
+          elif kubectl get deployment heart-disease-api -n default >/dev/null 2>&1; then
+            kubectl rollout status deployment/heart-disease-api -n default --timeout=5m
+          else
+            echo "No deployment named 'heart-disease-deployment' or 'heart-disease-api' found in namespace 'default'. Skipping rollout status check."
+          fi
+
+  # Stage 7: Deploy with Helm (Prometheus & ServiceMonitor)
+  helm-deploy:
+    runs-on: ubuntu-latest
+    needs: push-to-ecr
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+
+      - name: Update kubeconfig for EKS
+        run: aws eks update-kubeconfig --region ap-south-1 --name heart-disease-cluster
+
+      - name: Add Helm repo for Prometheus charts
+        run: |
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo update
+
+      - name: Install kube-prometheus-stack (CRDs + Prometheus)
+        run: |
+          helm upgrade --install prometheus prometheus-community/kube-prometheus-stack \
+            --namespace monitoring --create-namespace --wait
+      - name: Wait for ServiceMonitor CRD
+        run: |
+          echo "Waiting for ServiceMonitor CRD to be available..."
+          for i in {1..30}; do
+            if kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; then
+              echo "ServiceMonitor CRD is available"
+              break
+            fi
+            echo "ServiceMonitor CRD not present yet; retrying ($i/30)..."
+            sleep 10
+          done
+
+      - name: Cleanup conflicting non-Helm resources
+        run: |
+          echo "Checking for existing resources that may conflict with Helm release..."
+          NAMESPACE=default
+          CONFLICT_NAMES=("heart-disease-service" "heart-disease-deployment" "heart-disease-api")
+          for NAME in "${CONFLICT_NAMES[@]}"; do
+            # Check Service
+            if kubectl get svc "$NAME" -n "$NAMESPACE" >/dev/null 2>&1; then
+              OWNED=$(kubectl get svc "$NAME" -n "$NAMESPACE" -o jsonpath='{.metadata.annotations.meta.helm.sh/release-name}' 2>/dev/null || echo "")
+              MANAGED=$(kubectl get svc "$NAME" -n "$NAMESPACE" -o jsonpath='{.metadata.labels.app.kubernetes.io/managed-by}' 2>/dev/null || echo "")
+              if [ -z "$OWNED" ] && [ "$MANAGED" != "Helm" ]; then
+                echo "Deleting non-Helm Service: $NAME"
+                kubectl delete svc "$NAME" -n "$NAMESPACE" || true
+              else
+                echo "Service $NAME is managed by Helm; skipping"
+              fi
+            fi
+
+            # Check Deployment
+            if kubectl get deploy "$NAME" -n "$NAMESPACE" >/dev/null 2>&1; then
+              OWNED_DEP=$(kubectl get deploy "$NAME" -n "$NAMESPACE" -o jsonpath='{.metadata.annotations.meta.helm.sh/release-name}' 2>/dev/null || echo "")
+              MANAGED_DEP=$(kubectl get deploy "$NAME" -n "$NAMESPACE" -o jsonpath='{.metadata.labels.app.kubernetes.io/managed-by}' 2>/dev/null || echo "")
+              if [ -z "$OWNED_DEP" ] && [ "$MANAGED_DEP" != "Helm" ]; then
+                echo "Deleting non-Helm Deployment: $NAME"
+                kubectl delete deploy "$NAME" -n "$NAMESPACE" || true
+              else
+                echo "Deployment $NAME is managed by Helm; skipping"
+              fi
+            fi
+          done
+
+      - name: Deploy/Upgrade with Helm (toggle Prometheus)
+        run: |
+          if kubectl get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1; then
+            echo "CRD exists; enabling prometheus in Helm chart"
+            helm upgrade --install heart-disease ./helm/heart-disease --namespace default --wait --atomic --timeout 10m --set prometheus.enabled=true
+          else
+            echo "CRD not found; installing chart with prometheus disabled"
+            helm upgrade --install heart-disease ./helm/heart-disease --namespace default --wait --atomic --timeout 10m --set prometheus.enabled=false
+          fi

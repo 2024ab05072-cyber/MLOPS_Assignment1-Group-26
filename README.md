@@ -1,6 +1,14 @@
 Heart Disease Prediction - README
 =================================
 
+MLOPS Assignment 1
+Group Number: 26
+Team Members: 2024AB05204 - B V S Sasidhar
+ 2024AA05148 - Garima Chopra
+ 2024AB05072 - Ankit Kumar Gupta
+ 2024AB05069 - Ayush Kumar
+ 2024AA05329 - Lititia Khanna
+
 Overview
 --------
 This repository contains a FastAPI service that serves a heart disease prediction model, training scripts, Helm charts for Kubernetes deployment, and a GitHub Actions CI/CD pipeline that trains, tests, builds, pushes Docker images to AWS ECR, and deploys to AWS EKS. The project also includes optional Prometheus monitoring via ServiceMonitor when the cluster has the Prometheus Operator installed.

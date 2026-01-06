@@ -6,11 +6,11 @@ MLOPS Assignment 1
 Group Number: 26
 
 Team Members: 
- 2024AB05204 - B V S Sasidhar
- 2024AA05148 - Garima Chopra
- 2024AB05072 - Ankit Kumar Gupta
- 2024AB05069 - Ayush Kumar
- 2024AA05329 - Lititia Khanna
+- 2024AB05204 - B V S Sasidhar
+- 2024AA05148 - Garima Chopra
+- 2024AB05072 - Ankit Kumar Gupta
+- 2024AB05069 - Ayush Kumar
+- 2024AA05329 - Lititia Khanna
 
 Overview
 --------
